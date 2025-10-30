@@ -287,7 +287,7 @@ func (m *Model) renderDashboard() string {
 
 	// MOTD Message
 	if m.motdManager != nil {
-		if motd, ok := m.motdManager.(interface{ GetMessage() string }); ok {
+		if motd, ok := m.motdManager.(interface{ GetMessage() string }); ok && motd != nil {
 			message := motd.GetMessage()
 			if message != "" {
 				motdStyle := lipgloss.NewStyle().

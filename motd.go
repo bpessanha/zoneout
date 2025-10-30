@@ -85,14 +85,23 @@ func (m *MOTD) selectRandomMessage() {
 }
 
 func (m *MOTD) GetMessage() string {
+	if m == nil {
+		return ""
+	}
 	return m.currentMessage
 }
 
 func (m *MOTD) NeedsRefresh() bool {
+	if m == nil {
+		return false
+	}
 	return time.Since(m.loadedAt) > 24*time.Hour
 }
 
 func (m *MOTD) Refresh() {
+	if m == nil {
+		return
+	}
 	m.selectRandomMessage()
 	m.loadedAt = time.Now()
 }
