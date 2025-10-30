@@ -2,6 +2,8 @@
 
 A beautiful, terminal-based Pomodoro timer written in Go with MP3 white noise support and transition sound effects.
 
+![Zoneout Screenshot](screenshot.png)
+
 ## Features
 
 - **Pomodoro Cycles**: Default 3 sessions of 25-minute focus + 5-minute breaks
@@ -38,10 +40,6 @@ go build -o zoneout
 ```bash
 ./zoneout
 ```
-
-### Screenshot
-
-![Zoneout Screenshot](screenshot.png)
 
 ### Controls
 
