@@ -39,6 +39,10 @@ go build -o zoneout
 ./zoneout
 ```
 
+### Screenshot
+
+![Zoneout Screenshot](screenshot.png)
+
 ### Controls
 
 | Key | Action |
