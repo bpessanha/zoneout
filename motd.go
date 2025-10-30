@@ -79,6 +79,8 @@ func (m *MOTD) loadMessages(motdDir string) error {
 func (m *MOTD) selectRandomMessage() {
 	if len(m.messages) > 0 {
 		m.currentMessage = m.messages[rand.Intn(len(m.messages))]
+	} else {
+		m.currentMessage = ""
 	}
 }
 

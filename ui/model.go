@@ -288,12 +288,15 @@ func (m *Model) renderDashboard() string {
 	// MOTD Message
 	if m.motdManager != nil {
 		if motd, ok := m.motdManager.(interface{ GetMessage() string }); ok {
-			motdStyle := lipgloss.NewStyle().
-				Foreground(lipgloss.Color("#FFD93D")).
-				PaddingLeft(2).
-				Italic(true)
-			sb.WriteString(motdStyle.Render(fmt.Sprintf("💬 %s", motd.GetMessage())))
-			sb.WriteString("\n\n")
+			message := motd.GetMessage()
+			if message != "" {
+				motdStyle := lipgloss.NewStyle().
+					Foreground(lipgloss.Color("#FFD93D")).
+					PaddingLeft(2).
+					Italic(true)
+				sb.WriteString(motdStyle.Render(fmt.Sprintf("💬 %s", message)))
+				sb.WriteString("\n\n")
+			}
 		}
 	}
 
