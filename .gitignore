@@ -1,0 +1,30 @@
+# Binaries
+zoneout
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Runtime data
+.pomo_stats
+.zoneout_stats
+
+# IDE
+.vscode/
+.idea/
+.claude/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+go.sum
+
+# User-provided content (optional - uncomment to track)
+# whitenoise/
+# sounds/
+# motd/
