@@ -351,7 +351,7 @@ func (m *Model) createLargeTimer(timeStr string) string {
 		"3": {
 			" ██████ ",
 			"██     █",
-			"  █████ ",
+			"   ████ ",
 			"██     █",
 			" ██████ ",
 		},
