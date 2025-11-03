@@ -189,6 +189,11 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.audioPlayer.PlayMP3(m.availableMP3s[m.selectedMP3])
 			m.showAudioMenu = false
 		}
+
+	case "esc":
+		if m.showAudioMenu {
+			m.showAudioMenu = false
+		}
 	}
 
 	return m, nil
