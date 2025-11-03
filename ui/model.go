@@ -146,12 +146,15 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case " ": // space - Start/Pause
 		if m.pomodoro.CurrentMode == models.ModeIdle {
 			m.pomodoro.Start()
+			m.lastTickTime = time.Now()
 		} else if m.pomodoro.IsRunning && !m.pomodoro.IsPaused {
 			m.pomodoro.Pause()
 			m.audioPlayer.Pause()
+			m.lastTickTime = time.Now() // Reset time to avoid jump on resume
 		} else if m.pomodoro.IsPaused {
 			m.pomodoro.Resume()
 			m.audioPlayer.Resume()
+			m.lastTickTime = time.Now() // Reset time to avoid jump on resume
 		}
 
 	case "r": // reset
