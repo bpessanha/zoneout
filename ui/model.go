@@ -256,6 +256,13 @@ func (m *Model) renderDashboard() string {
 	sb.WriteString(largeTimerStyle.Render(largeTimer))
 	sb.WriteString("\n\n")
 
+	// Progress bar
+	if m.pomodoro.CurrentMode != models.ModeIdle {
+		progressBar := m.createProgressBar()
+		sb.WriteString(progressBar)
+		sb.WriteString("\n\n")
+	}
+
 	// Session info with stats
 	sessionStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#A0E7E5")).
@@ -417,6 +424,54 @@ func (m *Model) createLargeTimer(timeStr string) string {
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+func (m *Model) createProgressBar() string {
+	// Calculate progress
+	if m.pomodoro.TotalTime == 0 {
+		return ""
+	}
+
+	progress := float64(m.pomodoro.TotalTime-m.pomodoro.RemainingTime) / float64(m.pomodoro.TotalTime)
+	if progress < 0 {
+		progress = 0
+	}
+	if progress > 1 {
+		progress = 1
+	}
+
+	// Bar dimensions
+	barWidth := 40
+	filledWidth := int(progress * float64(barWidth))
+	emptyWidth := barWidth - filledWidth
+
+	// Determine color based on mode
+	progressColor := "#FF6B6B" // Focus mode - red/orange
+	if m.pomodoro.CurrentMode == models.ModeBreak {
+		progressColor = "#6BCF7F" // Break mode - green
+	}
+
+	// Build the bar with colors
+	filledBar := strings.Repeat("█", filledWidth)
+	emptyBar := strings.Repeat("░", emptyWidth)
+
+	// Create styled components
+	filledStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(progressColor))
+
+	emptyStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#333333"))
+
+	textStyle := lipgloss.NewStyle().
+		PaddingLeft(2)
+
+	progressPercent := int(progress * 100)
+	barText := fmt.Sprintf("Progress: [%s%s] %d%%",
+		filledStyle.Render(filledBar),
+		emptyStyle.Render(emptyBar),
+		progressPercent)
+
+	return textStyle.Render(barText)
 }
 
 func (m *Model) renderAudioMenu() string {
