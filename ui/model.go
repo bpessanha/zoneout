@@ -440,8 +440,8 @@ func (m *Model) createProgressBar() string {
 		progress = 1
 	}
 
-	// Bar dimensions
-	barWidth := 40
+	// Bar dimensions - match timer width (approximately 50 chars)
+	barWidth := 50
 	filledWidth := int(progress * float64(barWidth))
 	emptyWidth := barWidth - filledWidth
 
@@ -463,13 +463,11 @@ func (m *Model) createProgressBar() string {
 		Foreground(lipgloss.Color("#333333"))
 
 	textStyle := lipgloss.NewStyle().
-		PaddingLeft(2)
+		PaddingLeft(4) // Match timer padding
 
-	progressPercent := int(progress * 100)
-	barText := fmt.Sprintf("Progress: [%s%s] %d%%",
+	barText := fmt.Sprintf("[%s%s]",
 		filledStyle.Render(filledBar),
-		emptyStyle.Render(emptyBar),
-		progressPercent)
+		emptyStyle.Render(emptyBar))
 
 	return textStyle.Render(barText)
 }
