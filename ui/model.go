@@ -462,14 +462,11 @@ func (m *Model) createProgressBar() string {
 	emptyStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#333333"))
 
-	textStyle := lipgloss.NewStyle().
-		PaddingLeft(4) // Match timer padding
-
 	barText := fmt.Sprintf("[%s%s]",
 		filledStyle.Render(filledBar),
 		emptyStyle.Render(emptyBar))
 
-	return textStyle.Render(barText)
+	return barText
 }
 
 func (m *Model) renderAudioMenu() string {
