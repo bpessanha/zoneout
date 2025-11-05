@@ -1,5 +1,6 @@
 # Binaries
 zoneout
+dist/
 *.exe
 *.dll
 *.so
