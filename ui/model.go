@@ -24,6 +24,7 @@ type Model struct {
 	selectedMP3    int
 	availableMP3s  []string
 	showAudioMenu  bool
+	showHelp       bool
 	lastTickTime   time.Time
 	width          int
 	height         int
@@ -157,10 +158,15 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.lastTickTime = time.Now() // Reset time to avoid jump on resume
 		}
 
-	case "r": // reset
+	case "R": // reset cycle
 		m.pomodoro.Stop()
 		m.audioPlayer.Stop()
 		m.showAudioMenu = false
+
+	case "r": // reset session
+		m.pomodoro.RemainingTime = m.pomodoro.TotalTime
+		m.pomodoro.PlayStartSound()
+		m.lastTickTime = time.Now()
 
 	case ">": // skip to next phase
 		if m.pomodoro.IsRunning || m.pomodoro.IsPaused {
@@ -193,7 +199,13 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		if m.showAudioMenu {
 			m.showAudioMenu = false
+		} else if m.showHelp {
+			m.showHelp = false
 		}
+
+	case "h":
+		m.showHelp = !m.showHelp
+		m.showAudioMenu = false // Close audio menu if help opens
 	}
 
 	return m, nil
@@ -206,7 +218,9 @@ func (m *Model) View() string {
 
 	content := m.renderDashboard()
 
-	if m.showAudioMenu {
+	if m.showHelp {
+		content += "\n\n" + m.renderHelp()
+	} else if m.showAudioMenu {
 		content += "\n\n" + m.renderAudioMenu()
 	}
 
@@ -313,18 +327,11 @@ func (m *Model) renderDashboard() string {
 		}
 	}
 
-	// Controls
-	controlsStyle := lipgloss.NewStyle().
+	// Help hint
+	hintStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#666666")).
 		PaddingLeft(2)
-	controls := []string{
-		"SPACE - Start/Pause",
-		"r - Reset",
-		"> - Skip Phase",
-		"a - Audio Menu",
-		"q - Quit",
-	}
-	sb.WriteString(controlsStyle.Render(strings.Join(controls, " | ")))
+	sb.WriteString(hintStyle.Render("Press 'h' for help"))
 
 	return sb.String()
 }
@@ -470,6 +477,27 @@ func (m *Model) createProgressBar() string {
 		emptyStyle.Render(emptyBar))
 
 	return barText
+}
+
+func (m *Model) renderHelp() string {
+	var sb strings.Builder
+
+	menuStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(1, 2).
+		Foreground(lipgloss.Color("#00D9FF"))
+
+	sb.WriteString("─── HELP ───\n\n")
+	sb.WriteString("SPACE     Start/Pause\n")
+	sb.WriteString("R         Reset Cycle (back to idle)\n")
+	sb.WriteString("r         Reset Session (restart timer)\n")
+	sb.WriteString(">         Skip to next phase\n")
+	sb.WriteString("a         Toggle audio menu\n")
+	sb.WriteString("h         Toggle help\n")
+	sb.WriteString("ESC       Close menu\n")
+	sb.WriteString("q         Quit\n")
+
+	return menuStyle.Render(sb.String())
 }
 
 func (m *Model) renderAudioMenu() string {
