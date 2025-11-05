@@ -257,11 +257,9 @@ func (m *Model) renderDashboard() string {
 	sb.WriteString("\n\n")
 
 	// Progress bar
-	if m.pomodoro.CurrentMode != models.ModeIdle {
-		progressBar := m.createProgressBar()
-		sb.WriteString(progressBar)
-		sb.WriteString("\n\n")
-	}
+	progressBar := m.createProgressBar()
+	sb.WriteString(progressBar)
+	sb.WriteString("\n\n")
 
 	// Session info with stats
 	sessionStyle := lipgloss.NewStyle().
@@ -427,27 +425,32 @@ func (m *Model) createLargeTimer(timeStr string) string {
 }
 
 func (m *Model) createProgressBar() string {
-	// Calculate progress
-	if m.pomodoro.TotalTime == 0 {
-		return ""
-	}
-
-	progress := float64(m.pomodoro.TotalTime-m.pomodoro.RemainingTime) / float64(m.pomodoro.TotalTime)
-	if progress < 0 {
-		progress = 0
-	}
-	if progress > 1 {
-		progress = 1
-	}
-
 	// Bar dimensions - match timer width (approximately 50 chars)
 	barWidth := 50
-	filledWidth := int(progress * float64(barWidth))
+	var filledWidth int
+
+	// Calculate progress based on mode
+	if m.pomodoro.CurrentMode == models.ModeIdle || m.pomodoro.TotalTime == 0 {
+		// Show empty bar when idle
+		filledWidth = 0
+	} else {
+		progress := float64(m.pomodoro.TotalTime-m.pomodoro.RemainingTime) / float64(m.pomodoro.TotalTime)
+		if progress < 0 {
+			progress = 0
+		}
+		if progress > 1 {
+			progress = 1
+		}
+		filledWidth = int(progress * float64(barWidth))
+	}
+
 	emptyWidth := barWidth - filledWidth
 
 	// Determine color based on mode
-	progressColor := "#FF6B6B" // Focus mode - red/orange
-	if m.pomodoro.CurrentMode == models.ModeBreak {
+	progressColor := "#666666" // Idle mode - dark gray
+	if m.pomodoro.CurrentMode == models.ModeFocus {
+		progressColor = "#FF6B6B" // Focus mode - red/orange
+	} else if m.pomodoro.CurrentMode == models.ModeBreak {
 		progressColor = "#6BCF7F" // Break mode - green
 	}
 
