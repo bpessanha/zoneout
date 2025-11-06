@@ -203,9 +203,16 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.showHelp = false
 		}
 
-	case "h":
+	case "h", "?":
 		m.showHelp = !m.showHelp
 		m.showAudioMenu = false // Close audio menu if help opens
+
+	case "m": // New random MOTD
+		if m.motdManager != nil {
+			if motd, ok := m.motdManager.(interface{ Refresh() }); ok {
+				motd.Refresh()
+			}
+		}
 	}
 
 	return m, nil
@@ -331,7 +338,7 @@ func (m *Model) renderDashboard() string {
 	hintStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#666666")).
 		PaddingLeft(2)
-	sb.WriteString(hintStyle.Render("Press 'h' for help"))
+	sb.WriteString(hintStyle.Render("Press 'h' or '?' for help"))
 
 	return sb.String()
 }
@@ -493,7 +500,8 @@ func (m *Model) renderHelp() string {
 	sb.WriteString("r         Reset Session (restart timer)\n")
 	sb.WriteString(">         Skip to next phase\n")
 	sb.WriteString("a         Toggle audio menu\n")
-	sb.WriteString("h         Toggle help\n")
+	sb.WriteString("h / ?     Toggle help\n")
+	sb.WriteString("m         New random MOTD\n")
 	sb.WriteString("ESC       Close menu\n")
 	sb.WriteString("q         Quit\n")
 
