@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"zoneout/audio"
@@ -17,13 +18,29 @@ import (
 var assetsFS embed.FS
 
 func main() {
+	// Get user home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("Failed to get home directory: %v", err)
+	}
+
+	// Create config directory for zoneout
+	configDir := filepath.Join(homeDir, ".zoneout")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		log.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	// Set up directory paths
+	whitenoiseDir := filepath.Join(configDir, "whitenoise")
+	motdDir := filepath.Join(configDir, "motd")
+
 	// Create white noise directory if it doesn't exist
-	if err := os.MkdirAll("./whitenoise", 0755); err != nil {
+	if err := os.MkdirAll(whitenoiseDir, 0755); err != nil {
 		log.Fatalf("Failed to create whitenoise directory: %v", err)
 	}
 
 	// Initialize audio player with embedded whitenoise + user files
-	audioPlayer, err := audio.NewAudioPlayerWithEmbed("./whitenoise", assetsFS)
+	audioPlayer, err := audio.NewAudioPlayerWithEmbed(whitenoiseDir, assetsFS)
 	if err != nil {
 		log.Fatalf("Failed to initialize audio player: %v", err)
 	}
@@ -31,12 +48,12 @@ func main() {
 	defer audioPlayer.Cleanup()
 
 	// Create motd directory if it doesn't exist (for user-provided messages)
-	if err := os.MkdirAll("./motd", 0755); err != nil {
+	if err := os.MkdirAll(motdDir, 0755); err != nil {
 		log.Fatalf("Failed to create motd directory: %v", err)
 	}
 
 	// Initialize MOTD from embedded + user files
-	motdManager, err := NewMOTDWithEmbed("./motd", assetsFS)
+	motdManager, err := NewMOTDWithEmbed(motdDir, assetsFS)
 	if err != nil {
 		// MOTD is optional, log but don't fail
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
