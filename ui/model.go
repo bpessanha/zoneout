@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"zoneout/audio"
+	"zoneout/config"
 	"zoneout/models"
 	"zoneout/stats"
 )
@@ -20,6 +21,7 @@ type Model struct {
 	pomodoro       *models.Pomodoro
 	audioPlayer    *audio.AudioPlayer
 	appStats       *stats.Stats
+	appConfig      *config.Config
 	motdManager    interface{} // MOTDManager interface from main package
 	selectedMP3    int
 	availableMP3s  []string
@@ -31,11 +33,12 @@ type Model struct {
 	lastPhaseMode  models.Mode
 }
 
-func NewModel(pomodoro *models.Pomodoro, audioPlayer *audio.AudioPlayer, appStats *stats.Stats, motdManager interface{}) *Model {
+func NewModel(pomodoro *models.Pomodoro, audioPlayer *audio.AudioPlayer, appStats *stats.Stats, appConfig *config.Config, motdManager interface{}) *Model {
 	m := &Model{
 		pomodoro:       pomodoro,
 		audioPlayer:    audioPlayer,
 		appStats:       appStats,
+		appConfig:      appConfig,
 		motdManager:    motdManager,
 		selectedMP3:    0,
 		lastTickTime:   time.Now(),
@@ -213,6 +216,32 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				motd.Refresh()
 			}
 		}
+
+	case "+", "=": // Volume up
+		newVolume := m.audioPlayer.VolumeUp()
+		if m.appConfig != nil {
+			m.appConfig.SetVolume(newVolume)
+		}
+		// Restart audio with new volume if playing
+		if m.audioPlayer.IsPlaying() {
+			currentMP3 := m.audioPlayer.GetCurrentMP3()
+			if currentMP3 != "" {
+				m.audioPlayer.PlayMP3(currentMP3)
+			}
+		}
+
+	case "-", "_": // Volume down
+		newVolume := m.audioPlayer.VolumeDown()
+		if m.appConfig != nil {
+			m.appConfig.SetVolume(newVolume)
+		}
+		// Restart audio with new volume if playing
+		if m.audioPlayer.IsPlaying() {
+			currentMP3 := m.audioPlayer.GetCurrentMP3()
+			if currentMP3 != "" {
+				m.audioPlayer.PlayMP3(currentMP3)
+			}
+		}
 	}
 
 	return m, nil
@@ -317,6 +346,14 @@ func (m *Model) renderDashboard() string {
 		Foreground(lipgloss.Color(statusColor)).
 		PaddingLeft(2)
 	sb.WriteString(statusStyle.Render(statusStr))
+	sb.WriteString("\n\n")
+
+	// Volume level
+	volumePercent := int(m.audioPlayer.GetVolume() * 100)
+	volumeStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#A0E7E5")).
+		PaddingLeft(2)
+	sb.WriteString(volumeStyle.Render(fmt.Sprintf("Volume: %d%%", volumePercent)))
 	sb.WriteString("\n\n")
 
 	// MOTD Message
@@ -500,6 +537,7 @@ func (m *Model) renderHelp() string {
 	sb.WriteString("r         Reset Session (restart timer)\n")
 	sb.WriteString(">         Skip to next phase\n")
 	sb.WriteString("a         Toggle audio menu\n")
+	sb.WriteString("+/-       Volume Up/Down\n")
 	sb.WriteString("h / ?     Toggle help\n")
 	sb.WriteString("m         New random MOTD\n")
 	sb.WriteString("ESC       Close menu\n")

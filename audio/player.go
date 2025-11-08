@@ -21,6 +21,7 @@ type AudioPlayer struct {
 	loopEnabled        bool
 	currentCmd         *exec.Cmd
 	embeddedTempFile   string // Path to embedded whitenoise temp file
+	volume             float64 // Volume level (0.0 to 1.0)
 	mu                 sync.Mutex
 }
 
@@ -28,6 +29,7 @@ func NewAudioPlayer(whitenoiseDir string) (*AudioPlayer, error) {
 	ap := &AudioPlayer{
 		whitenoiseDir: whitenoiseDir,
 		loopEnabled:   true,
+		volume:        0.5,
 	}
 
 	// Scan for MP3 files
@@ -42,6 +44,7 @@ func NewAudioPlayerWithEmbed(whitenoiseDir string, assetsFS embed.FS) (*AudioPla
 	ap := &AudioPlayer{
 		whitenoiseDir: whitenoiseDir,
 		loopEnabled:   true,
+		volume:        0.5,
 	}
 
 	// Load embedded rain-and-thunder.mp3
@@ -151,16 +154,19 @@ func (ap *AudioPlayer) PlayMP3(filePath string) error {
 	}
 
 	// Use appropriate audio player based on OS
+	volumeStr := fmt.Sprintf("%.2f", ap.volume)
+	volumeInt := int(ap.volume * 100)
+
 	var cmd *exec.Cmd
 	if runtime.GOOS == "darwin" {
-		// macOS - use afplay with looping
-		cmd = exec.Command("afplay", filePath)
+		// macOS - use afplay with volume
+		cmd = exec.Command("afplay", "-v", volumeStr, filePath)
 	} else if runtime.GOOS == "linux" {
-		// Linux - try ffplay first with looping
-		cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-loop", "0", filePath)
+		// Linux - try ffplay first with looping and volume
+		cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-loop", "0", "-volume", fmt.Sprintf("%d", volumeInt), filePath)
 	} else {
 		// Windows and others
-		cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-loop", "0", filePath)
+		cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-loop", "0", "-volume", fmt.Sprintf("%d", volumeInt), filePath)
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -265,18 +271,24 @@ func (ap *AudioPlayer) SetLoop(enabled bool) {
 
 // PlaySoundEffect plays a short MP3 sound effect file without interrupting current playback
 func (ap *AudioPlayer) PlaySoundEffect(filePath string) {
+	// Get volume in local scope before goroutine
+	volume := ap.GetVolume()
+
 	// Play sound effect in a background goroutine to avoid blocking
 	go func() {
+		volumeStr := fmt.Sprintf("%.2f", volume)
+		volumeInt := int(volume * 100)
+
 		var cmd *exec.Cmd
 		if runtime.GOOS == "darwin" {
-			// macOS - use afplay
-			cmd = exec.Command("afplay", filePath)
+			// macOS - use afplay with volume
+			cmd = exec.Command("afplay", "-v", volumeStr, filePath)
 		} else if runtime.GOOS == "linux" {
-			// Linux - use ffplay
-			cmd = exec.Command("ffplay", "-nodisp", "-autoexit", filePath)
+			// Linux - use ffplay with volume
+			cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-volume", fmt.Sprintf("%d", volumeInt), filePath)
 		} else {
-			// Windows - use ffplay
-			cmd = exec.Command("ffplay", "-nodisp", "-autoexit", filePath)
+			// Windows - use ffplay with volume
+			cmd = exec.Command("ffplay", "-nodisp", "-autoexit", "-volume", fmt.Sprintf("%d", volumeInt), filePath)
 		}
 
 		if err := cmd.Start(); err != nil {
@@ -292,4 +304,50 @@ func (ap *AudioPlayer) PlaySoundEffect(filePath string) {
 func (ap *AudioPlayer) Close() error {
 	ap.Stop()
 	return nil
+}
+
+// SetVolume sets the volume level (0.0 to 1.0)
+func (ap *AudioPlayer) SetVolume(volume float64) {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
+	if volume < 0.0 {
+		volume = 0.0
+	}
+	if volume > 1.0 {
+		volume = 1.0
+	}
+
+	ap.volume = volume
+}
+
+// GetVolume returns the current volume level (0.0 to 1.0)
+func (ap *AudioPlayer) GetVolume() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.volume
+}
+
+// VolumeUp increases volume by 0.1 (10%)
+func (ap *AudioPlayer) VolumeUp() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
+	ap.volume += 0.1
+	if ap.volume > 1.0 {
+		ap.volume = 1.0
+	}
+	return ap.volume
+}
+
+// VolumeDown decreases volume by 0.1 (10%)
+func (ap *AudioPlayer) VolumeDown() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
+	ap.volume -= 0.1
+	if ap.volume < 0.0 {
+		ap.volume = 0.0
+	}
+	return ap.volume
 }

@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"zoneout/audio"
+	"zoneout/config"
 	"zoneout/models"
 	"zoneout/stats"
 	"zoneout/ui"
@@ -47,6 +48,12 @@ func main() {
 	defer audioPlayer.Stop()
 	defer audioPlayer.Cleanup()
 
+	// Initialize config
+	appConfig := config.NewConfig(configDir)
+
+	// Set initial volume from config
+	audioPlayer.SetVolume(appConfig.GetVolume())
+
 	// Create motd directory if it doesn't exist (for user-provided messages)
 	if err := os.MkdirAll(motdDir, 0755); err != nil {
 		log.Fatalf("Failed to create motd directory: %v", err)
@@ -73,7 +80,7 @@ func main() {
 	defer pomodoroState.Cleanup()
 
 	// Create the main model
-	mainModel := ui.NewModel(pomodoroState, audioPlayer, appStats, motdManager)
+	mainModel := ui.NewModel(pomodoroState, audioPlayer, appStats, appConfig, motdManager)
 
 	// Create and run the Bubble Tea program
 	p := tea.NewProgram(mainModel, tea.WithAltScreen())

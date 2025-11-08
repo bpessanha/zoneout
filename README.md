@@ -2,7 +2,7 @@
 
 A beautiful, terminal-based Pomodoro timer written in Go with MP3 white noise support and transition sound effects.
 
-![Zoneout Screenshot](screenshot.png)
+<img src="screenshot.png" alt="Zoneout Screenshot" width="600">
 
 ## ⚡ Quick Start (TL;DR)
 
