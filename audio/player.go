@@ -1,7 +1,9 @@
 package audio
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,14 +13,15 @@ import (
 )
 
 type AudioPlayer struct {
-	whitenoiseDir string
-	availableMP3s []string
-	currentMP3    string
-	isPlaying     bool
-	isPaused      bool
-	loopEnabled   bool
-	currentCmd    *exec.Cmd
-	mu            sync.Mutex
+	whitenoiseDir      string
+	availableMP3s      []string
+	currentMP3         string
+	isPlaying          bool
+	isPaused           bool
+	loopEnabled        bool
+	currentCmd         *exec.Cmd
+	embeddedTempFile   string // Path to embedded whitenoise temp file
+	mu                 sync.Mutex
 }
 
 func NewAudioPlayer(whitenoiseDir string) (*AudioPlayer, error) {
@@ -33,6 +36,62 @@ func NewAudioPlayer(whitenoiseDir string) (*AudioPlayer, error) {
 	}
 
 	return ap, nil
+}
+
+func NewAudioPlayerWithEmbed(whitenoiseDir string, assetsFS embed.FS) (*AudioPlayer, error) {
+	ap := &AudioPlayer{
+		whitenoiseDir: whitenoiseDir,
+		loopEnabled:   true,
+	}
+
+	// Load embedded rain-and-thunder.mp3
+	if err := ap.loadEmbeddedWhitenoise(assetsFS); err != nil {
+		// Not fatal - embedded whitenoise is optional
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load embedded whitenoise: %v\n", err)
+	}
+
+	// Scan user-provided MP3 files
+	if err := ap.ScanWhitenoiseDirectory(); err != nil {
+		// If no embedded and no user files, error
+		if len(ap.availableMP3s) == 0 {
+			return nil, fmt.Errorf("failed to load any MP3 files: %w", err)
+		}
+		// Otherwise, just use embedded
+	}
+
+	return ap, nil
+}
+
+func (ap *AudioPlayer) loadEmbeddedWhitenoise(assetsFS embed.FS) error {
+	// Try to read rain-and-thunder.mp3 from embedded assets
+	data, err := fs.ReadFile(assetsFS, "whitenoise/rain-and-thunder.mp3")
+	if err != nil {
+		return fmt.Errorf("failed to read embedded rain-and-thunder.mp3: %w", err)
+	}
+
+	// Create temporary file for embedded whitenoise
+	tmpFile, err := os.CreateTemp("", "zoneout-whitenoise-*.mp3")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file for whitenoise: %w", err)
+	}
+
+	// Write embedded MP3 data to temp file
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return fmt.Errorf("failed to write whitenoise to temp file: %w", err)
+	}
+
+	tmpFile.Close()
+
+	// Add to available MP3s
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
+	ap.availableMP3s = append(ap.availableMP3s, tmpFile.Name())
+	ap.embeddedTempFile = tmpFile.Name()
+
+	return nil
 }
 
 func (ap *AudioPlayer) ScanWhitenoiseDirectory() error {
@@ -158,6 +217,17 @@ func (ap *AudioPlayer) Stop() {
 	}
 	ap.isPlaying = false
 	ap.isPaused = false
+}
+
+func (ap *AudioPlayer) Cleanup() {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+
+	// Remove temporary embedded whitenoise file
+	if ap.embeddedTempFile != "" {
+		os.Remove(ap.embeddedTempFile)
+		ap.embeddedTempFile = ""
+	}
 }
 
 func (ap *AudioPlayer) IsPlaying() bool {

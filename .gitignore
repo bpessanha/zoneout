@@ -25,7 +25,8 @@ Thumbs.db
 # Go
 go.sum
 
-# User-provided content (optional - uncomment to track)
-# whitenoise/
-# sounds/
-# motd/
+# Embedded assets (tracked for distribution)
+# Note: User may add additional files to these directories
+# sounds/      - Contains embedded transition sounds (start.mp3, stop.mp3)
+# motd/        - Contains embedded MOTD messages (messages.txt)
+# whitenoise/  - Contains embedded whitenoise (rain-and-thunder.mp3)

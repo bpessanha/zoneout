@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -12,31 +13,29 @@ import (
 	"zoneout/ui"
 )
 
+//go:embed sounds/* motd/* whitenoise/rain-and-thunder.mp3
+var assetsFS embed.FS
+
 func main() {
 	// Create white noise directory if it doesn't exist
 	if err := os.MkdirAll("./whitenoise", 0755); err != nil {
 		log.Fatalf("Failed to create whitenoise directory: %v", err)
 	}
 
-	// Initialize audio player
-	audioPlayer, err := audio.NewAudioPlayer("./whitenoise")
+	// Initialize audio player with embedded whitenoise + user files
+	audioPlayer, err := audio.NewAudioPlayerWithEmbed("./whitenoise", assetsFS)
 	if err != nil {
 		log.Fatalf("Failed to initialize audio player: %v", err)
 	}
 	defer audioPlayer.Stop()
 
-	// Create sounds directory if it doesn't exist
-	if err := os.MkdirAll("./sounds", 0755); err != nil {
-		log.Fatalf("Failed to create sounds directory: %v", err)
-	}
-
-	// Create motd directory if it doesn't exist
+	// Create motd directory if it doesn't exist (for user-provided messages)
 	if err := os.MkdirAll("./motd", 0755); err != nil {
 		log.Fatalf("Failed to create motd directory: %v", err)
 	}
 
-	// Initialize MOTD
-	motdManager, err := NewMOTD("./motd")
+	// Initialize MOTD from embedded + user files
+	motdManager, err := NewMOTDWithEmbed("./motd", assetsFS)
 	if err != nil {
 		// MOTD is optional, log but don't fail
 		fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
@@ -49,8 +48,11 @@ func main() {
 	// Initialize Pomodoro state
 	pomodoroState := models.NewPomodoro()
 
-	// Set up transition sound effects
-	pomodoroState.SetAudioPlayer(audioPlayer, "./sounds/start.mp3", "./sounds/stop.mp3")
+	// Set up transition sound effects from embedded assets
+	if err := pomodoroState.SetAudioPlayerWithEmbed(audioPlayer, assetsFS); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: Failed to load sound effects: %v\n", err)
+	}
+	defer pomodoroState.Cleanup()
 
 	// Create the main model
 	mainModel := ui.NewModel(pomodoroState, audioPlayer, appStats, motdManager)

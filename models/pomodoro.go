@@ -1,7 +1,10 @@
 package models
 
 import (
+	"embed"
 	"fmt"
+	"io/fs"
+	"os"
 	"time"
 	"zoneout/audio"
 )
@@ -21,18 +24,20 @@ type Session struct {
 }
 
 type Pomodoro struct {
-	CurrentMode      Mode
-	Session          Session
-	CurrentSession   int
-	RemainingTime    time.Duration
-	TotalTime        time.Duration
-	IsRunning        bool
-	IsPaused         bool
-	LastTickTime     time.Time
-	CompletedSessions int
-	audioPlayer      *audio.AudioPlayer
-	startSoundPath   string
-	stopSoundPath    string
+	CurrentMode        Mode
+	Session            Session
+	CurrentSession     int
+	RemainingTime      time.Duration
+	TotalTime          time.Duration
+	IsRunning          bool
+	IsPaused           bool
+	LastTickTime       time.Time
+	CompletedSessions  int
+	audioPlayer        *audio.AudioPlayer
+	startSoundPath     string
+	stopSoundPath      string
+	startSoundTempPath string // For cleanup
+	stopSoundTempPath  string // For cleanup
 }
 
 func NewPomodoro() *Pomodoro {
@@ -61,6 +66,43 @@ func (p *Pomodoro) SetAudioPlayer(player *audio.AudioPlayer, startSoundPath, sto
 	p.stopSoundPath = stopSoundPath
 }
 
+// SetAudioPlayerWithEmbed sets the audio player and extracts embedded sounds to temp files
+func (p *Pomodoro) SetAudioPlayerWithEmbed(player *audio.AudioPlayer, assetsFS embed.FS) error {
+	p.audioPlayer = player
+
+	// Extract start.mp3
+	startPath, err := extractSoundToTemp(assetsFS, "sounds/start.mp3")
+	if err != nil {
+		return fmt.Errorf("failed to extract start sound: %w", err)
+	}
+	p.startSoundPath = startPath
+	p.startSoundTempPath = startPath
+
+	// Extract stop.mp3
+	stopPath, err := extractSoundToTemp(assetsFS, "sounds/stop.mp3")
+	if err != nil {
+		// Clean up start sound if stop sound fails
+		os.Remove(startPath)
+		return fmt.Errorf("failed to extract stop sound: %w", err)
+	}
+	p.stopSoundPath = stopPath
+	p.stopSoundTempPath = stopPath
+
+	return nil
+}
+
+// Cleanup removes temporary sound files
+func (p *Pomodoro) Cleanup() {
+	if p.startSoundTempPath != "" {
+		os.Remove(p.startSoundTempPath)
+		p.startSoundTempPath = ""
+	}
+	if p.stopSoundTempPath != "" {
+		os.Remove(p.stopSoundTempPath)
+		p.stopSoundTempPath = ""
+	}
+}
+
 // PlayStartSound plays the start sound effect
 func (p *Pomodoro) PlayStartSound() {
 	if p.audioPlayer != nil && p.startSoundPath != "" {
@@ -73,6 +115,28 @@ func (p *Pomodoro) PlayStopSound() {
 	if p.audioPlayer != nil && p.stopSoundPath != "" {
 		p.audioPlayer.PlaySoundEffect(p.stopSoundPath)
 	}
+}
+
+// Helper function to extract embedded sound to temp file
+func extractSoundToTemp(assetsFS embed.FS, path string) (string, error) {
+	data, err := fs.ReadFile(assetsFS, path)
+	if err != nil {
+		return "", fmt.Errorf("failed to read embedded file: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp("", "zoneout-sound-*.mp3")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to write to temp file: %w", err)
+	}
+
+	tmpFile.Close()
+	return tmpFile.Name(), nil
 }
 
 func (p *Pomodoro) Start() {
