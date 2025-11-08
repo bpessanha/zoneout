@@ -60,8 +60,8 @@ func main() {
 		motdManager = nil
 	}
 
-	// Initialize stats
-	appStats := stats.NewStats()
+	// Initialize stats with config directory
+	appStats := stats.NewStatsWithPath(configDir)
 
 	// Initialize Pomodoro state
 	pomodoroState := models.NewPomodoro()

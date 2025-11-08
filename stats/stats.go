@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -13,13 +14,20 @@ type Stats struct {
 	TodaySessions      int   `json:"today_sessions"`
 	LastSessionDate    string `json:"last_session_date"`
 	TotalFocusMinutes  int   `json:"total_focus_minutes"`
+	statsFile          string
 	mu                 sync.Mutex
 }
 
-var statsFile = ".zoneout_stats"
-
 func NewStats() *Stats {
 	s := &Stats{}
+	s.Load()
+	return s
+}
+
+func NewStatsWithPath(configDir string) *Stats {
+	s := &Stats{
+		statsFile: filepath.Join(configDir, ".zoneout_stats"),
+	}
 	s.Load()
 	return s
 }
@@ -28,8 +36,14 @@ func (s *Stats) Load() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Use default if not set
+	statsPath := s.statsFile
+	if statsPath == "" {
+		statsPath = ".zoneout_stats"
+	}
+
 	// Try to read stats file
-	data, err := os.ReadFile(statsFile)
+	data, err := os.ReadFile(statsPath)
 	if err != nil {
 		// File doesn't exist yet, initialize with zeros
 		s.TotalSessions = 0
@@ -58,12 +72,18 @@ func (s *Stats) Save() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// Use default if not set
+	statsPath := s.statsFile
+	if statsPath == "" {
+		statsPath = ".zoneout_stats"
+	}
+
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal stats: %w", err)
 	}
 
-	if err := os.WriteFile(statsFile, data, 0644); err != nil {
+	if err := os.WriteFile(statsPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write stats file: %w", err)
 	}
 
@@ -73,6 +93,12 @@ func (s *Stats) Save() error {
 func (s *Stats) AddSession(focusMinutes int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Use default if not set
+	statsPath := s.statsFile
+	if statsPath == "" {
+		statsPath = ".zoneout_stats"
+	}
 
 	today := time.Now().Format("2006-01-02")
 
@@ -92,7 +118,7 @@ func (s *Stats) AddSession(focusMinutes int) error {
 		return fmt.Errorf("failed to marshal stats: %w", err)
 	}
 
-	if err := os.WriteFile(statsFile, data, 0644); err != nil {
+	if err := os.WriteFile(statsPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write stats file: %w", err)
 	}
 
