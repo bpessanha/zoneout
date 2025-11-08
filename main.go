@@ -13,7 +13,7 @@ import (
 	"zoneout/ui"
 )
 
-//go:embed sounds/* motd/* whitenoise/rain-and-thunder.mp3
+//go:embed sounds/* motd/* whitenoise/*
 var assetsFS embed.FS
 
 func main() {
