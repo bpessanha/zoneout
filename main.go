@@ -28,6 +28,7 @@ func main() {
 		log.Fatalf("Failed to initialize audio player: %v", err)
 	}
 	defer audioPlayer.Stop()
+	defer audioPlayer.Cleanup()
 
 	// Create motd directory if it doesn't exist (for user-provided messages)
 	if err := os.MkdirAll("./motd", 0755); err != nil {
