@@ -222,26 +222,14 @@ func (m *Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.appConfig != nil {
 			m.appConfig.SetVolume(newVolume)
 		}
-		// Restart audio with new volume if playing
-		if m.audioPlayer.IsPlaying() {
-			currentMP3 := m.audioPlayer.GetCurrentMP3()
-			if currentMP3 != "" {
-				m.audioPlayer.PlayMP3(currentMP3)
-			}
-		}
+		// Volume will be applied on next audio start
 
 	case "-", "_": // Volume down
 		newVolume := m.audioPlayer.VolumeDown()
 		if m.appConfig != nil {
 			m.appConfig.SetVolume(newVolume)
 		}
-		// Restart audio with new volume if playing
-		if m.audioPlayer.IsPlaying() {
-			currentMP3 := m.audioPlayer.GetCurrentMP3()
-			if currentMP3 != "" {
-				m.audioPlayer.PlayMP3(currentMP3)
-			}
-		}
+		// Volume will be applied on next audio start
 	}
 
 	return m, nil
