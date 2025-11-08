@@ -50,7 +50,7 @@ func NewAudioPlayerWithEmbed(whitenoiseDir string, assetsFS embed.FS) (*AudioPla
 		fmt.Fprintf(os.Stderr, "Warning: Failed to load embedded whitenoise: %v\n", err)
 	}
 
-	// Scan user-provided MP3 files
+	// Scan user-provided MP3 files (preserves embedded)
 	if err := ap.ScanWhitenoiseDirectory(); err != nil {
 		// If no embedded and no user files, error
 		if len(ap.availableMP3s) == 0 {
@@ -98,7 +98,19 @@ func (ap *AudioPlayer) ScanWhitenoiseDirectory() error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
+	// Preserve embedded MP3 if it exists
+	var embeddedMP3 string
+	if ap.embeddedTempFile != "" {
+		embeddedMP3 = ap.embeddedTempFile
+	}
+
+	// Clear user-provided MP3s (but keep embedded)
 	ap.availableMP3s = []string{}
+
+	// Re-add embedded if it was preserved
+	if embeddedMP3 != "" {
+		ap.availableMP3s = append(ap.availableMP3s, embeddedMP3)
+	}
 
 	entries, err := os.ReadDir(ap.whitenoiseDir)
 	if err != nil {
